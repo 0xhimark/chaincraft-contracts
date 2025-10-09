@@ -8,13 +8,14 @@ import '@solidstate/contracts/interfaces/IERC721Metadata.sol';
 import '@solidstate/contracts/token/non_fungible/metadata/NonFungibleTokenMetadata.sol';
 import './GameRegistryStorage.sol';
 import './IGameRegistry.sol';
+import './Operable/Operable.sol';
 
 /**
  * @title GameRegistryFacet
  * @dev ERC721 facet for publishing games as NFTs with unlimited supply
  * @dev Inherits from SolidstateNonFungibleToken for full ERC721 functionality
  */
-contract GameRegistryFacet is SolidstateNonFungibleToken, SafeOwnable, IGameRegistry {
+contract GameRegistryFacet is SolidstateNonFungibleToken, Operable, IGameRegistry {
 
     // ============ Errors ============
     
@@ -24,6 +25,7 @@ contract GameRegistryFacet is SolidstateNonFungibleToken, SafeOwnable, IGameRegi
     error GameRegistry__TokenDoesNotExist();
     error GameRegistry__NotTokenOwner();
     error GameRegistry__URICannotBeEmpty();
+    error GameRegistry__NotOperator();
 
     // ============ Modifiers ============
 
@@ -34,6 +36,11 @@ contract GameRegistryFacet is SolidstateNonFungibleToken, SafeOwnable, IGameRegi
 
     modifier onlyTokenOwner(uint256 tokenId) {
         if (this.ownerOf(tokenId) != msg.sender) revert GameRegistry__NotTokenOwner();
+        _;
+    }
+
+    modifier onlyOwnerOrOperator() {
+        if (msg.sender != _owner() && !_isOperator(msg.sender)) revert GameRegistry__NotOperator();
         _;
     }
 
@@ -63,7 +70,7 @@ contract GameRegistryFacet is SolidstateNonFungibleToken, SafeOwnable, IGameRegi
     function publishGame(
         address to,
         string memory gameURI
-    ) external override onlyOwner returns (uint256) {
+    ) external override onlyOwnerOrOperator returns (uint256) {
         GameRegistryStorage.Layout storage ds = GameRegistryStorage.layout();
         if (to == address(0)) revert GameRegistry__InvalidMintAddress();
         if (bytes(gameURI).length == 0) revert GameRegistry__EmptyURI();
@@ -100,11 +107,11 @@ contract GameRegistryFacet is SolidstateNonFungibleToken, SafeOwnable, IGameRegi
     // ============ View Functions ============
 
     /**
-     * @dev Override tokenURI to use our custom game URIs
+     * @dev Override _tokenURI to use our custom game URIs
      * @param tokenId The token ID
      * @return The token URI
      */
-    function tokenURI(uint256 tokenId) external view override(IERC721Metadata, NonFungibleTokenMetadata) returns (string memory) {
+    function _tokenURI(uint256 tokenId) internal view override returns (string memory) {
         if (!_tokenExists(tokenId)) revert GameRegistry__TokenDoesNotExist();
         return GameRegistryStorage.layout().gameURIs[tokenId];
     }
@@ -131,5 +138,4 @@ contract GameRegistryFacet is SolidstateNonFungibleToken, SafeOwnable, IGameRegi
             return false;
         }
     }
-
 }

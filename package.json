@@ -22,6 +22,7 @@
   "type": "module",
   "dependencies": {
     "@openzeppelin/contracts": "^5.4.0",
-    "@solidstate/contracts": "1.0.0-next.2"
+    "@solidstate/contracts": "1.0.0-next.2",
+    "solady": "^0.1.26"
   }
 }
