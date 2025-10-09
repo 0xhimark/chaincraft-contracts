@@ -6,9 +6,9 @@ import '@solidstate/contracts/access/ownable/safe/SafeOwnable.sol';
 import '@solidstate/contracts/storage/ERC721Storage.sol';
 import '@solidstate/contracts/interfaces/IERC721Metadata.sol';
 import '@solidstate/contracts/token/non_fungible/metadata/NonFungibleTokenMetadata.sol';
-import './GameRegistryStorage.sol';
-import './IGameRegistry.sol';
-import './Operable/Operable.sol';
+import '../storage/GameRegistryStorage.sol';
+import '../interfaces/IGameRegistry.sol';
+import '../utils/Operable/Operable.sol';
 
 /**
  * @title GameRegistryFacet

@@ -35,7 +35,7 @@ export default buildModule("ChainCraft", (m) => {
 
   // Load ABIs for both contracts
   const gameRegistryAbi =
-    require("../../artifacts/contracts/GameRegistryFacet.sol/GameRegistryFacet.json").abi;
+    require("../../artifacts/contracts/facets/GameRegistryFacet.sol/GameRegistryFacet.json").abi;
   const diamondAbi =
     require("../../artifacts/contracts/ChainCraftDiamond.sol/ChainCraftDiamond.json").abi;
 

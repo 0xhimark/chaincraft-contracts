@@ -1,7 +1,10 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert";
 import { network } from "hardhat";
-import { getFunctionSelector } from "viem";
+import { toFunctionSelector } from "viem";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
 
 describe("GameRegistry", () => {
   let diamond: any;
@@ -27,23 +30,12 @@ describe("GameRegistry", () => {
     // Get function selectors for GameRegistryFacet
     const allSelectors = getFunctionSelectors(gameRegistryFacet.abi);
 
-    // Filter out selectors that are already added by SolidstateDiamondProxy
-    // These are the selectors that SolidstateDiamondProxy adds in its constructor
-    const alreadyAddedSelectors = [
-      "0x01ffc9a7", // supportsInterface
-      "0x1f931c1c", // diamondCut
-      "0x7a0ed627", // facets
-      "0xadfca15e", // facetFunctionSelectors
-      "0x52ef6b2c", // facetAddresses
-      "0xcdffacc6", // facetAddress
-      "0x8da5cb5b", // owner
-      "0x2f54bf6e", // nomineeOwner
-      "0xf2fde38b", // transferOwnership
-      "0x79ba5097", // acceptOwnership
-      "0x8ab5150a", // getFallbackAddress
-      "0x91423765", // setFallbackAddress
-    ];
+    // Get selectors that are already added by the diamond (from SolidstateDiamondProxy)
+    const diamondAbi =
+      require("../artifacts/contracts/ChainCraftDiamond.sol/ChainCraftDiamond.json").abi;
+    const alreadyAddedSelectors = getFunctionSelectors(diamondAbi);
 
+    // Filter out selectors that are already added by the diamond
     const selectors = allSelectors.filter(
       (selector) => !alreadyAddedSelectors.includes(selector)
     );
@@ -446,6 +438,6 @@ function getFunctionSelectors(abi: any[]): string[] {
       const signature = `${func.name}(${func.inputs
         .map((input: any) => input.type)
         .join(",")})`;
-      return getFunctionSelector(signature);
+      return toFunctionSelector(signature);
     });
 }
