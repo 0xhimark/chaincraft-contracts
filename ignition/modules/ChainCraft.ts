@@ -24,42 +24,42 @@ function getFunctionSelectors(abi: any[]): string[] {
 
 export default buildModule("ChainCraft", (m) => {
   // Deploy the Diamond contract first
-  const diamond = m.contract("CCGRDiamond", [], {
-    id: "CCGRDiamond",
+  const diamond = m.contract("ChainCraftDiamond", [], {
+    id: "ChainCraftDiamond",
   });
 
-  // Deploy the GameRegistryFacet
-  const gameRegistryFacet = m.contract("GameRegistryFacet", [], {
-    id: "GameRegistryFacet",
+  // Deploy the CCERC721Facet
+  const ccERC721Facet = m.contract("CCERC721Facet", [], {
+    id: "CCERC721Facet",
   });
 
   // Load ABIs for both contracts
-  const gameRegistryAbi =
-    require("../../artifacts/contracts/facets/GameRegistryFacet.sol/GameRegistryFacet.json").abi;
+  const ccERC721FacetAbi =
+    require("../../artifacts/contracts/facets/CCERC721Facet.sol/CCERC721Facet.json").abi;
   const diamondAbi =
-    require("../../artifacts/contracts/CCGRDiamond.sol/CCGRDiamond.json").abi;
+    require("../../artifacts/contracts/ChainCraftDiamond.sol/ChainCraftDiamond.json").abi;
 
-  // Get selectors for GameRegistryFacet
-  const allSelectors = getFunctionSelectors(gameRegistryAbi);
+  // Get selectors for CCERC721Facet
+  const allSelectors = getFunctionSelectors(ccERC721FacetAbi);
 
   // Get selectors that are already added by the diamond (from SolidstateDiamondProxy)
   const alreadyAddedSelectors = getFunctionSelectors(diamondAbi);
 
   // Filter out selectors that are already added by the diamond
-  const gameRegistrySelectors = allSelectors.filter(
+  const ccERC721FacetSelectors = allSelectors.filter(
     (selector) => !alreadyAddedSelectors.includes(selector)
   );
 
-  // Add GameRegistryFacet to the diamond
+  // Add CCERC721Facet to the diamond
   m.call(
     diamond,
     "diamondCut",
     [
       [
         {
-          target: gameRegistryFacet,
+          target: ccERC721Facet,
           action: FacetCutAction.Add,
-          selectors: gameRegistrySelectors,
+          selectors: ccERC721FacetSelectors,
         },
       ],
       "0x0000000000000000000000000000000000000000",
@@ -68,19 +68,24 @@ export default buildModule("ChainCraft", (m) => {
     { id: "DiamondCut" }
   );
 
-  // Get GameRegistryFacet interface at diamond address for initialization
-  const gameRegistry = m.contractAt("GameRegistryFacet", diamond, {
-    id: "GameRegistry",
+  // Get CCERC721Facet interface at diamond address for initialization
+  const ccERC721FacetInterface = m.contractAt("CCERC721Facet", diamond, {
+    id: "CCERC721FacetInterface",
   });
 
-  // Initialize the GameRegistry
-  m.call(gameRegistry, "initialize", ["ChainCraft Game Registry", "CCGR"], {
-    id: "Initialize",
-  });
+  // Initialize the CCERC721Facet
+  m.call(
+    ccERC721FacetInterface,
+    "initialize",
+    ["ChainCraft Game Registry", "CCGR"],
+    {
+      id: "Initialize",
+    }
+  );
 
   return {
     diamond,
-    gameRegistryFacet,
-    gameRegistry,
+    ccERC721Facet,
+    ccERC721FacetInterface,
   };
 });

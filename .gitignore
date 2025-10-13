@@ -13,8 +13,14 @@
 # Hardhat compilation (v2) support directory
 /cache
 
+# Hardhat Ignition deployment artifacts (keep deployed_addresses.json and journal.jsonl)
+/ignition/deployments/*/artifacts/
+/ignition/deployments/*/build-info/
+
 # Typechain output
 /types
 
 # Hardhat coverage reports
 /coverage
+
+.env

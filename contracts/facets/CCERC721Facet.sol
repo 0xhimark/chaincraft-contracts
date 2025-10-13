@@ -6,16 +6,16 @@ import '@solidstate/contracts/access/ownable/safe/SafeOwnable.sol';
 import '@solidstate/contracts/storage/ERC721Storage.sol';
 import '@solidstate/contracts/interfaces/IERC721Metadata.sol';
 import '@solidstate/contracts/token/non_fungible/metadata/NonFungibleTokenMetadata.sol';
-import '../storage/GameRegistryStorage.sol';
-import '../interfaces/IGameRegistry.sol';
+import '../storage/CCERC721Storage.sol';
+import '../interfaces/ICCERC721Facet.sol';
 import '../utils/Operable/Operable.sol';
 
 /**
- * @title GameRegistryFacet
+ * @title CCERC721Facet
  * @dev ERC721 facet for publishing games as NFTs with unlimited supply
  * @dev Inherits from SolidstateNonFungibleToken for full ERC721 functionality
  */
-contract GameRegistryFacet is SolidstateNonFungibleToken, Operable, IGameRegistry {
+contract CCERC721Facet is SolidstateNonFungibleToken, Operable, ICCERC721Facet {
 
     // ============ Errors ============
     
@@ -52,7 +52,7 @@ contract GameRegistryFacet is SolidstateNonFungibleToken, Operable, IGameRegistr
      * @param _symbol Token symbol
      */
     function initialize(string memory _name, string memory _symbol) external override onlyOwner {
-        GameRegistryStorage.Layout storage ds = GameRegistryStorage.layout();
+        CCERC721Storage.Layout storage ds = CCERC721Storage.layout();
         if (ds.nextTokenId != 0) revert GameRegistry__AlreadyInitialized();
         
         // Set name and symbol in ERC721Storage
@@ -76,7 +76,7 @@ contract GameRegistryFacet is SolidstateNonFungibleToken, Operable, IGameRegistr
         address to,
         string memory gameURI
     ) external override onlyOwnerOrOperator returns (uint256) {
-        GameRegistryStorage.Layout storage ds = GameRegistryStorage.layout();
+        CCERC721Storage.Layout storage ds = CCERC721Storage.layout();
         if (to == address(0)) revert GameRegistry__InvalidMintAddress();
         if (bytes(gameURI).length == 0) revert GameRegistry__EmptyURI();
 
@@ -103,7 +103,7 @@ contract GameRegistryFacet is SolidstateNonFungibleToken, Operable, IGameRegistr
     {
         if (bytes(newURI).length == 0) revert GameRegistry__URICannotBeEmpty();
         
-        GameRegistryStorage.Layout storage ds = GameRegistryStorage.layout();
+        CCERC721Storage.Layout storage ds = CCERC721Storage.layout();
         ds.gameURIs[tokenId] = newURI;
         
         emit GameURIUpdated(tokenId, newURI);
@@ -118,7 +118,7 @@ contract GameRegistryFacet is SolidstateNonFungibleToken, Operable, IGameRegistr
      */
     function _tokenURI(uint256 tokenId) internal view override returns (string memory) {
         if (!_tokenExists(tokenId)) revert GameRegistry__TokenDoesNotExist();
-        return GameRegistryStorage.layout().gameURIs[tokenId];
+        return CCERC721Storage.layout().gameURIs[tokenId];
     }
 
     /**
@@ -126,7 +126,7 @@ contract GameRegistryFacet is SolidstateNonFungibleToken, Operable, IGameRegistr
      * @return The total number of games published
      */
     function totalGames() external view returns (uint256) {
-        return GameRegistryStorage.layout().nextTokenId - 1;
+        return CCERC721Storage.layout().nextTokenId - 1;
     }
 
     // ============ Internal Functions ============

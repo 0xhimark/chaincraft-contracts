@@ -39,10 +39,8 @@ const config: HardhatUserConfig = {
     // },
     sankoTestnet: {
       type: "http",
-      chainType: "l1",
       url: "https://sanko-arb-sepolia.rpc.caldera.xyz/http",
       chainId: 1992,
-      // accounts: [configVariable("PRIVATE_KEY")],
       accounts: [process.env.PRIVATE_KEY!],
     },
   },

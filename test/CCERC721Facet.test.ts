@@ -6,7 +6,7 @@ import { createRequire } from "module";
 
 const require = createRequire(import.meta.url);
 
-describe("GameRegistry", () => {
+describe("CCERC721Facet", () => {
   let diamond: any;
   let gameRegistry: any;
   let deployer: any;
@@ -19,20 +19,20 @@ describe("GameRegistry", () => {
     [deployer, user1, user2] = walletClients;
 
     // Deploy the Diamond contract
-    diamond = await viem.deployContract("CCGRDiamond", []);
+    diamond = await viem.deployContract("ChainCraftDiamond", []);
 
-    // Deploy GameRegistryFacet
-    const gameRegistryFacet = await viem.deployContract(
-      "GameRegistryFacet",
+    // Deploy CCERC721Facet
+    const ccERC721Facet = await viem.deployContract(
+      "CCERC721Facet",
       []
     );
 
-    // Get function selectors for GameRegistryFacet
-    const allSelectors = getFunctionSelectors(gameRegistryFacet.abi);
+    // Get function selectors for CCERC721Facet
+    const allSelectors = getFunctionSelectors(ccERC721Facet.abi);
 
     // Get selectors that are already added by the diamond (from SolidstateDiamondProxy)
     const diamondAbi =
-      require("../artifacts/contracts/CCGRDiamond.sol/CCGRDiamond.json").abi;
+      require("../artifacts/contracts/ChainCraftDiamond.sol/ChainCraftDiamond.json").abi;
     const alreadyAddedSelectors = getFunctionSelectors(diamondAbi);
 
     // Filter out selectors that are already added by the diamond
@@ -44,11 +44,11 @@ describe("GameRegistry", () => {
     await diamond.write.diamondCut(
       [
         [
-          {
-            target: gameRegistryFacet.address,
-            action: 0, // Add
-            selectors: selectors,
-          },
+        {
+          target: ccERC721Facet.address,
+          action: 0, // Add
+          selectors: selectors,
+        },
         ],
         "0x0000000000000000000000000000000000000000",
         "0x",
@@ -58,13 +58,13 @@ describe("GameRegistry", () => {
       }
     );
 
-    // Get the game registry interface from the diamond
+    // Get the CCERC721Facet interface from the diamond
     gameRegistry = await viem.getContractAt(
-      "GameRegistryFacet",
+      "CCERC721Facet",
       diamond.address
     );
 
-    // Initialize the GameRegistry
+    // Initialize the CCERC721Facet
     await gameRegistry.write.initialize(["ChainCraft Games", "CCG"], {
       account: deployer.account,
     });

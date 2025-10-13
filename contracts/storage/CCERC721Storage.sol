@@ -4,12 +4,12 @@ pragma solidity ^0.8.24;
 import { sslot } from '@solidstate/contracts/data/StorageSlot.sol';
 
 /**
- * @title GameRegistryStorage
- * @dev Storage layout for GameRegistryFacet using SolidState pattern
+ * @title CCERC721Storage
+ * @dev Storage layout for ERC721Facet using SolidState pattern
  */
-library GameRegistryStorage {
+library CCERC721Storage {
     /**
-     * @custom:storage-location erc7201:chaincraft.layout.GameRegistry
+     * @custom:storage-location erc7201:chaincraft.layout.ERC721
      */
     struct Layout {
         // Game-specific state
@@ -19,9 +19,9 @@ library GameRegistryStorage {
 
     sslot internal constant DEFAULT_STORAGE_SLOT =
         sslot.wrap(
-            keccak256(
+                keccak256(
                 abi.encode(
-                    uint256(keccak256(bytes('chaincraft.layout.GameRegistry'))) - 1
+                    uint256(keccak256(bytes('chaincraft.layout.ERC721'))) - 1
                 )
             ) & ~bytes32(uint256(0xff))
         );

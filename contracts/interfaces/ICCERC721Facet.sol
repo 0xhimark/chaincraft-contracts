@@ -2,10 +2,10 @@
 pragma solidity ^0.8.24;
 
 /**
- * @title IGameRegistry
- * @dev Interface for GameRegistryFacet - game publishing as NFTs
+ * @title ICCERC721Facet
+ * @dev Interface for CCERC721Facet - game publishing as NFTs
  */
-interface IGameRegistry {
+interface ICCERC721Facet {
     // Events
     event GamePublished(uint256 indexed tokenId, address indexed publisher, string gameURI);
     event GameURIUpdated(uint256 indexed tokenId, string newURI);
