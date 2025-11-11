@@ -40,6 +40,11 @@ export default buildModule("ChainCraft", (m) => {
     id: "GameRegistryFacet",
   });
 
+  // Deploy ProxyAdminFacet (optional - uncomment if needed)
+  // const proxyAdminFacet = m.contract("ProxyAdminFacet", [], {
+  //   id: "ProxyAdminFacet",
+  // });
+
   // ============ Load ABIs ============
 
   const operableFacetAbi =
@@ -51,6 +56,10 @@ export default buildModule("ChainCraft", (m) => {
   const diamondAbi =
     require("../../artifacts/contracts/ChainCraftDiamond.sol/ChainCraftDiamond.json").abi;
 
+  // Uncomment if deploying ProxyAdminFacet
+  // const proxyAdminFacetAbi =
+  //   require("../../artifacts/contracts/facets/ProxyAdminFacet/ProxyAdminFacet.sol/ProxyAdminFacet.json").abi;
+
   // ============ Get Function Selectors ============
 
   // Get selectors for OperableFacet
@@ -58,6 +67,9 @@ export default buildModule("ChainCraft", (m) => {
 
   // Get selectors for GameRegistryFacet
   const gameRegistryFacetSelectors = getFunctionSelectors(gameRegistryFacetAbi);
+
+  // Uncomment if deploying ProxyAdminFacet
+  // const proxyAdminFacetSelectors = getFunctionSelectors(proxyAdminFacetAbi);
 
   // Get selectors already added by the diamond (from SafeOwnable, etc.)
   const alreadyAddedSelectors = getFunctionSelectors(diamondAbi);
@@ -72,6 +84,11 @@ export default buildModule("ChainCraft", (m) => {
   const gameRegistryFacetSelectorsFiltered = gameRegistryFacetSelectors.filter(
     (selector) => !alreadyAddedSelectors.includes(selector)
   );
+
+  // Uncomment if deploying ProxyAdminFacet
+  // const proxyAdminFacetSelectorsFiltered = proxyAdminFacetSelectors.filter(
+  //   (selector) => !alreadyAddedSelectors.includes(selector)
+  // );
 
   // ============ Diamond Cut - Add Facets ============
 
@@ -90,6 +107,12 @@ export default buildModule("ChainCraft", (m) => {
           action: FacetCutAction.Add,
           selectors: gameRegistryFacetSelectorsFiltered,
         },
+        // Uncomment if deploying ProxyAdminFacet
+        // {
+        //   target: proxyAdminFacet,
+        //   action: FacetCutAction.Add,
+        //   selectors: proxyAdminFacetSelectorsFiltered,
+        // },
       ],
       "0x0000000000000000000000000000000000000000",
       "0x",
@@ -97,38 +120,24 @@ export default buildModule("ChainCraft", (m) => {
     { id: "DiamondCut" }
   );
 
-  // ============ Get Facet Interfaces at Diamond Address ============
-
-  const operableFacetInterface = m.contractAt("OperableFacet", diamond, {
-    id: "OperableFacetInterface",
-  });
-
-  const gameRegistryFacetInterface = m.contractAt(
-    "GameRegistryFacet",
-    diamond,
-    {
-      id: "GameRegistryFacetInterface",
-    }
-  );
-
   // ============ Initialize GameRegistry ============
 
-  m.call(
-    gameRegistryFacetInterface,
-    "initialize",
-    ["ChainCraft Games", "CCG"],
-    {
-      id: "Initialize",
-    }
-  );
+  // Get GameRegistryFacet interface at diamond address to call initialize
+  const gameRegistryAtDiamond = m.contractAt("GameRegistryFacet", diamond, {
+    id: "DiamondAsGameRegistry",
+  });
+
+  m.call(gameRegistryAtDiamond, "initialize", ["ChainCraft Games", "CCG"], {
+    id: "Initialize",
+  });
 
   // ============ Return Deployed Contracts ============
 
   return {
     diamond,
     operableFacet,
-    operableFacetInterface,
     gameRegistryFacet,
-    gameRegistryFacetInterface,
+    // Uncomment if deploying ProxyAdminFacet
+    // proxyAdminFacet,
   };
 });

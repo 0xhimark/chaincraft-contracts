@@ -194,6 +194,8 @@ See [SECURITY_NOTES.md](./SECURITY_NOTES.md) for detailed security analysis.
 
 ## Scripts
 
+### Operator Management
+
 ```bash
 # List all operators
 pnpm hardhat run scripts/list-operators.ts --network sankoTestnet
@@ -203,6 +205,16 @@ pnpm hardhat run scripts/add-operator.ts --network sankoTestnet
 
 # Remove an operator
 pnpm hardhat run scripts/remove-operator.ts --network sankoTestnet
+```
+
+### ProxyAdminFacet Management
+
+```bash
+# Add ProxyAdminFacet (if you need to transfer admin later)
+DIAMOND_ADDRESS=0x... pnpm hardhat run scripts/add-proxy-admin-facet.ts --network sankoTestnet
+
+# Remove ProxyAdminFacet (makes diamond structure immutable)
+DIAMOND_ADDRESS=0x... pnpm hardhat run scripts/remove-proxy-admin-facet.ts --network sankoTestnet
 ```
 
 ## Project Structure
