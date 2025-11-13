@@ -153,7 +153,7 @@ describe("EIP712Facet", () => {
 
   describe("EIP712 Signature Verification with Game Publishing", () => {
     it("should publish game with valid EIP-712 signature from user", async () => {
-      const uuid = "test-game-uuid-1";
+      const uuid = "550e8400-e29b-41d4-a716-446655440001";
       const gameURI = "ipfs://Qm123abc";
       const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600); // 1 hour from now
 
@@ -205,7 +205,7 @@ describe("EIP712Facet", () => {
     });
 
     it("should reject game publishing with signature from wrong signer", async () => {
-      const uuid = "test-game-uuid-2";
+      const uuid = "550e8400-e29b-41d4-a716-446655440002";
       const gameURI = "ipfs://Qm456def";
       const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
 
@@ -252,7 +252,7 @@ describe("EIP712Facet", () => {
     });
 
     it("should reject expired signature", async () => {
-      const uuid = "test-game-uuid-3";
+      const uuid = "550e8400-e29b-41d4-a716-446655440003";
       const gameURI = "ipfs://Qm789ghi";
       const deadline = BigInt(Math.floor(Date.now() / 1000) - 3600); // 1 hour ago (expired)
 
@@ -298,7 +298,7 @@ describe("EIP712Facet", () => {
     });
 
     it("should prevent signature replay attacks", async () => {
-      const uuid = "test-game-uuid-4";
+      const uuid = "550e8400-e29b-41d4-a716-446655440004";
       const gameURI = "ipfs://Qmabc123";
       const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
 
@@ -355,7 +355,7 @@ describe("EIP712Facet", () => {
 
     it("should correctly recover signer address", async () => {
       // Use a proper PublishGame struct hash for testing
-      const uuid = "test-recover-uuid";
+      const uuid = "550e8400-e29b-41d4-a716-446655440005";
       const gameURI = "ipfs://Qmtest";
       const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
 

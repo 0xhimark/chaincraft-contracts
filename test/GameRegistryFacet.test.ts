@@ -62,6 +62,38 @@ describe("GameRegistryFacet", () => {
     });
   }
 
+  // Helper to create EIP-712 signature for updating game URI
+  async function createUpdateGameURISignature(
+    uuid: string,
+    newURI: string,
+    deadline: bigint,
+    signer: any,
+    diamondAddress: string,
+    chainId: number
+  ) {
+    return await signer.signTypedData({
+      domain: {
+        name: "ChainCraft",
+        version: "1",
+        chainId,
+        verifyingContract: diamondAddress as `0x${string}`,
+      },
+      types: {
+        UpdateGameURI: [
+          { name: "uuid", type: "string" },
+          { name: "newURI", type: "string" },
+          { name: "deadline", type: "uint256" },
+        ],
+      },
+      primaryType: "UpdateGameURI",
+      message: {
+        uuid,
+        newURI,
+        deadline,
+      },
+    });
+  }
+
   beforeEach(async () => {
     const network_result = await network.connect();
     viem = network_result.viem;
@@ -496,10 +528,24 @@ describe("GameRegistryFacet", () => {
 
     it("should allow operator to update game URI by token ID", async () => {
       const newURI = "ipfs://Qm.../updated-metadata.json";
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
 
-      await gameRegistryFacet.write.updateGameURI([tokenId, newURI], {
-        account: operator.account,
-      });
+      // Get the token owner (user1) to sign the update
+      const signature = await createUpdateGameURISignature(
+        uuid,
+        newURI,
+        deadline,
+        user1, // token owner must sign
+        diamond.address,
+        chainId
+      );
+
+      await gameRegistryFacet.write.updateGameURI(
+        [tokenId, newURI, deadline, signature],
+        {
+          account: operator.account,
+        }
+      );
 
       const retrievedURI = await gameRegistryFacet.read.tokenURI([tokenId]);
       assert.strictEqual(retrievedURI, newURI);
@@ -507,10 +553,24 @@ describe("GameRegistryFacet", () => {
 
     it("should allow operator to update game URI by UUID", async () => {
       const newURI = "ipfs://Qm.../updated-metadata-2.json";
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
 
-      await gameRegistryFacet.write.updateGameURIByUUID([uuid, newURI], {
-        account: operator.account,
-      });
+      // Get the token owner (user1) to sign the update
+      const signature = await createUpdateGameURISignature(
+        uuid,
+        newURI,
+        deadline,
+        user1, // token owner must sign
+        diamond.address,
+        chainId
+      );
+
+      await gameRegistryFacet.write.updateGameURIByUUID(
+        [uuid, newURI, deadline, signature],
+        {
+          account: operator.account,
+        }
+      );
 
       const retrievedURI = await gameRegistryFacet.read.tokenURI([tokenId]);
       assert.strictEqual(retrievedURI, newURI);
@@ -518,11 +578,25 @@ describe("GameRegistryFacet", () => {
 
     it("should not allow token holder to update game URI", async () => {
       const newURI = "ipfs://Qm.../malicious-metadata.json";
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
+
+      // Token holder signs, but they're not an operator
+      const signature = await createUpdateGameURISignature(
+        uuid,
+        newURI,
+        deadline,
+        user1, // user1 is the token holder
+        diamond.address,
+        chainId
+      );
 
       try {
-        await gameRegistryFacet.write.updateGameURI([tokenId, newURI], {
-          account: user1.account, // user1 is the token holder
-        });
+        await gameRegistryFacet.write.updateGameURI(
+          [tokenId, newURI, deadline, signature],
+          {
+            account: user1.account, // user1 is the token holder but not operator
+          }
+        );
         assert.fail("Should have failed - token holder cannot update URI");
       } catch (error: any) {
         assert.ok(
@@ -534,25 +608,58 @@ describe("GameRegistryFacet", () => {
 
     it("should not allow unauthorized user to update game URI", async () => {
       const newURI = "ipfs://Qm.../unauthorized-metadata.json";
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
+
+      // Unauthorized user signs, but they're not the owner and not an operator
+      const signature = await createUpdateGameURISignature(
+        uuid,
+        newURI,
+        deadline,
+        user2, // user2 is not the token owner
+        diamond.address,
+        chainId
+      );
 
       try {
-        await gameRegistryFacet.write.updateGameURI([tokenId, newURI], {
-          account: user2.account,
-        });
+        await gameRegistryFacet.write.updateGameURI(
+          [tokenId, newURI, deadline, signature],
+          {
+            account: user2.account,
+          }
+        );
         assert.fail("Should have failed - not authorized");
       } catch (error: any) {
+        // Should fail either because user2 is not operator, or because signature doesn't match owner
+        const hasExpectedError =
+          error.message.includes("GameRegistryFacet__NotOperator") ||
+          error.message.includes("GameRegistry__SignerMismatch");
         assert.ok(
-          error.message.includes("GameRegistryFacet__NotOperator"),
-          `Expected GameRegistryFacet__NotOperator error, got: ${error.message}`
+          hasExpectedError,
+          `Expected GameRegistryFacet__NotOperator or SignerMismatch error, got: ${error.message}`
         );
       }
     });
 
     it("should not allow updating with empty URI", async () => {
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
+
+      // Token owner signs with empty URI
+      const signature = await createUpdateGameURISignature(
+        uuid,
+        "",
+        deadline,
+        user1, // token owner
+        diamond.address,
+        chainId
+      );
+
       try {
-        await gameRegistryFacet.write.updateGameURI([tokenId, ""], {
-          account: operator.account,
-        });
+        await gameRegistryFacet.write.updateGameURI(
+          [tokenId, "", deadline, signature],
+          {
+            account: operator.account,
+          }
+        );
         assert.fail("Should have failed - empty URI");
       } catch (error: any) {
         assert.ok(error.message.includes("GameRegistry__URICannotBeEmpty"));
@@ -561,11 +668,26 @@ describe("GameRegistryFacet", () => {
 
     it("should not allow updating non-existent token", async () => {
       const newURI = "ipfs://Qm.../updated-metadata-4.json";
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
+      const fakeUUID = "550e8400-e29b-41d4-a716-446655440999";
+
+      // Use deployer to sign (they're owner but token doesn't exist)
+      const signature = await createUpdateGameURISignature(
+        fakeUUID,
+        newURI,
+        deadline,
+        deployer,
+        diamond.address,
+        chainId
+      );
 
       try {
-        await gameRegistryFacet.write.updateGameURI([999n, newURI], {
-          account: deployer.account,
-        });
+        await gameRegistryFacet.write.updateGameURI(
+          [999n, newURI, deadline, signature],
+          {
+            account: deployer.account,
+          }
+        );
         assert.fail("Should have failed - token does not exist");
       } catch (error: any) {
         const hasExpectedError =
@@ -576,6 +698,307 @@ describe("GameRegistryFacet", () => {
         assert.ok(hasExpectedError, `Got unexpected error: ${error.message}`);
       }
     });
+
+    it("should reject expired signature", async () => {
+      const newURI = "ipfs://Qm.../updated-metadata.json";
+      const deadline = BigInt(Math.floor(Date.now() / 1000) - 3600); // 1 hour ago (expired)
+
+      const signature = await createUpdateGameURISignature(
+        uuid,
+        newURI,
+        deadline,
+        user1, // token owner
+        diamond.address,
+        chainId
+      );
+
+      try {
+        await gameRegistryFacet.write.updateGameURI(
+          [tokenId, newURI, deadline, signature],
+          {
+            account: operator.account,
+          }
+        );
+        assert.fail("Should have failed - expired signature");
+      } catch (error: any) {
+        assert.ok(
+          error.message.includes("EIP712__SignatureExpired"),
+          `Expected EIP712__SignatureExpired error, got: ${error.message}`
+        );
+      }
+    });
+
+    it("should prevent signature replay attacks", async () => {
+      const newURI = "ipfs://Qm.../updated-metadata.json";
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
+
+      const signature = await createUpdateGameURISignature(
+        uuid,
+        newURI,
+        deadline,
+        user1, // token owner
+        diamond.address,
+        chainId
+      );
+
+      // First use should succeed
+      await gameRegistryFacet.write.updateGameURI(
+        [tokenId, newURI, deadline, signature],
+        {
+          account: operator.account,
+        }
+      );
+
+      // Try to replay the same signature (should fail)
+      try {
+        await gameRegistryFacet.write.updateGameURI(
+          [tokenId, newURI, deadline, signature],
+          {
+            account: operator.account,
+          }
+        );
+        assert.fail("Should have prevented signature replay");
+      } catch (error: any) {
+        assert.ok(
+          error.message.includes("EIP712__SignatureAlreadyUsed"),
+          `Expected EIP712__SignatureAlreadyUsed error, got: ${error.message}`
+        );
+      }
+    });
+
+    it("should reject signature from non-owner", async () => {
+      const newURI = "ipfs://Qm.../updated-metadata.json";
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
+
+      // user2 signs (not the token owner)
+      const signature = await createUpdateGameURISignature(
+        uuid,
+        newURI,
+        deadline,
+        user2, // user2 is NOT the token owner
+        diamond.address,
+        chainId
+      );
+
+      try {
+        await gameRegistryFacet.write.updateGameURI(
+          [tokenId, newURI, deadline, signature],
+          {
+            account: operator.account,
+          }
+        );
+        assert.fail("Should have failed - signature from non-owner");
+      } catch (error: any) {
+        assert.ok(
+          error.message.includes("GameRegistry__SignerMismatch"),
+          `Expected GameRegistry__SignerMismatch error, got: ${error.message}`
+        );
+      }
+    });
+
+    it("should reject signature with wrong UUID", async () => {
+      const newURI = "ipfs://Qm.../updated-metadata.json";
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
+      const wrongUUID = "550e8400-e29b-41d4-a716-446655440999";
+
+      // Token owner signs with wrong UUID
+      const signature = await createUpdateGameURISignature(
+        wrongUUID, // wrong UUID
+        newURI,
+        deadline,
+        user1, // token owner
+        diamond.address,
+        chainId
+      );
+
+      try {
+        await gameRegistryFacet.write.updateGameURI(
+          [tokenId, newURI, deadline, signature],
+          {
+            account: operator.account,
+          }
+        );
+        assert.fail("Should have failed - signature with wrong UUID");
+      } catch (error: any) {
+        assert.ok(
+          error.message.includes("GameRegistry__SignerMismatch"),
+          `Expected GameRegistry__SignerMismatch error, got: ${error.message}`
+        );
+      }
+    });
+
+    it("should reject signature with wrong newURI", async () => {
+      const newURI = "ipfs://Qm.../updated-metadata.json";
+      const wrongURI = "ipfs://Qm.../wrong-metadata.json";
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
+
+      // Token owner signs with wrong URI
+      const signature = await createUpdateGameURISignature(
+        uuid,
+        wrongURI, // wrong URI
+        deadline,
+        user1, // token owner
+        diamond.address,
+        chainId
+      );
+
+      try {
+        await gameRegistryFacet.write.updateGameURI(
+          [tokenId, newURI, deadline, signature], // using different URI
+          {
+            account: operator.account,
+          }
+        );
+        assert.fail("Should have failed - signature with wrong URI");
+      } catch (error: any) {
+        assert.ok(
+          error.message.includes("GameRegistry__SignerMismatch"),
+          `Expected GameRegistry__SignerMismatch error, got: ${error.message}`
+        );
+      }
+    });
+
+    it("should reject signature with wrong deadline", async () => {
+      const newURI = "ipfs://Qm.../updated-metadata.json";
+      const deadline1 = BigInt(Math.floor(Date.now() / 1000) + 3600);
+      const deadline2 = BigInt(Math.floor(Date.now() / 1000) + 7200); // different deadline
+
+      // Token owner signs with deadline1
+      const signature = await createUpdateGameURISignature(
+        uuid,
+        newURI,
+        deadline1,
+        user1, // token owner
+        diamond.address,
+        chainId
+      );
+
+      try {
+        // Try to use signature with deadline2
+        await gameRegistryFacet.write.updateGameURI(
+          [tokenId, newURI, deadline2, signature],
+          {
+            account: operator.account,
+          }
+        );
+        assert.fail("Should have failed - signature with wrong deadline");
+      } catch (error: any) {
+        assert.ok(
+          error.message.includes("GameRegistry__SignerMismatch"),
+          `Expected GameRegistry__SignerMismatch error, got: ${error.message}`
+        );
+      }
+    });
+
+    it("should reject URI that is too long", async () => {
+      // Create URI that exceeds MAX_URI_LENGTH of 1024
+      // "ipfs://Qm" is 9 characters, so we need 1016 more to get 1025 total
+      const newURI = "ipfs://Qm" + "x".repeat(1016); // 1025 characters (exceeds MAX_URI_LENGTH of 1024)
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
+
+      const signature = await createUpdateGameURISignature(
+        uuid,
+        newURI,
+        deadline,
+        user1, // token owner
+        diamond.address,
+        chainId
+      );
+
+      try {
+        await gameRegistryFacet.write.updateGameURI(
+          [tokenId, newURI, deadline, signature],
+          {
+            account: operator.account,
+          }
+        );
+        assert.fail("Should have failed - URI too long");
+      } catch (error: any) {
+        assert.ok(
+          error.message.includes("GameRegistry__URITooLong"),
+          `Expected GameRegistry__URITooLong error, got: ${error.message}`
+        );
+      }
+    });
+
+    it("should reject empty signature", async () => {
+      const newURI = "ipfs://Qm.../updated-metadata.json";
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
+      const emptySignature = "0x"; // Empty signature
+
+      try {
+        await gameRegistryFacet.write.updateGameURI(
+          [tokenId, newURI, deadline, emptySignature],
+          {
+            account: operator.account,
+          }
+        );
+        assert.fail("Should have failed - empty signature");
+      } catch (error: any) {
+        // Empty signature will fail at ECDSA validation (invalid length)
+        assert.ok(
+          error.message.includes("ECDSA__InvalidSignatureLength") ||
+            error.message.includes("EIP712__InvalidSigner"),
+          `Expected ECDSA__InvalidSignatureLength or EIP712__InvalidSigner error, got: ${error.message}`
+        );
+      }
+    });
+
+    it("should reject invalid signature format", async () => {
+      const newURI = "ipfs://Qm.../updated-metadata.json";
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
+      // Invalid signature - wrong length (should be 65 bytes for ECDSA)
+      const invalidSignature = "0x1234"; // Too short
+
+      try {
+        await gameRegistryFacet.write.updateGameURI(
+          [tokenId, newURI, deadline, invalidSignature],
+          {
+            account: operator.account,
+          }
+        );
+        assert.fail("Should have failed - invalid signature format");
+      } catch (error: any) {
+        // Invalid signature format will fail during recovery
+        // Could be EIP712__InvalidSigner or a revert from ECDSA.recover
+        const hasExpectedError =
+          error.message.includes("EIP712__InvalidSigner") ||
+          error.message.includes("ECDSA") ||
+          error.message.includes("invalid signature");
+        assert.ok(
+          hasExpectedError,
+          `Expected signature validation error, got: ${error.message}`
+        );
+      }
+    });
+
+    it("should reject garbage signature data", async () => {
+      const newURI = "ipfs://Qm.../updated-metadata.json";
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
+      // Garbage signature - correct length but invalid data
+      const garbageSignature = "0x" + "00".repeat(65); // 65 bytes of zeros
+
+      try {
+        await gameRegistryFacet.write.updateGameURI(
+          [tokenId, newURI, deadline, garbageSignature],
+          {
+            account: operator.account,
+          }
+        );
+        assert.fail("Should have failed - garbage signature");
+      } catch (error: any) {
+        // Garbage signature will fail at ECDSA validation (invalid v value or invalid signer)
+        const hasExpectedError =
+          error.message.includes("ECDSA__InvalidV") ||
+          error.message.includes("EIP712__InvalidSigner") ||
+          error.message.includes("ECDSA");
+        assert.ok(
+          hasExpectedError,
+          `Expected ECDSA validation error, got: ${error.message}`
+        );
+      }
+    });
+
   });
 
   describe("View Functions", () => {

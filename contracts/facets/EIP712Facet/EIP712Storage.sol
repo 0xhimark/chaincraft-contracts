@@ -9,6 +9,12 @@ library EIP712Storage {
     
     /// @custom:storage-location erc7201:chaincraft.layout.EIP712
     struct Layout {
+        /// @dev Cached domain separator for gas efficiency
+        bytes32 cachedDomainSeparator;
+        
+        /// @dev Chain ID for which the domain separator was cached
+        uint256 cachedChainId;
+        
         /// @dev Track used signatures to prevent replay attacks
         mapping(bytes32 => bool) usedSignatures;
     }

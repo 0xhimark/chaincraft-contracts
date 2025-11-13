@@ -8,9 +8,9 @@ interface IGameRegistryFacet {
     // ============ Functions ============
 
     /// @notice Initialize the GameRegistry
-    /// @param name Token name
-    /// @param symbol Token symbol
-    function initialize(string memory name, string memory symbol) external;
+    /// @param name_ Token name
+    /// @param symbol_ Token symbol
+    function initialize(string memory name_, string memory symbol_) external;
 
     /// @notice Publish a new game as an NFT with EIP-712 signature verification
     /// @dev Requires user signature to prove consent. Operator submits the transaction.
@@ -28,17 +28,31 @@ interface IGameRegistryFacet {
         bytes memory signature
     ) external returns (uint256);
 
-    /// @notice Update the URI for an existing game by token ID
-    /// @dev Only callable by owner or operator (not token holder)
+    /// @notice Update the URI for an existing game by token ID with EIP-712 signature verification
+    /// @dev Requires token owner signature to prove consent. Operator submits the transaction.
     /// @param tokenId The game NFT token ID
     /// @param newURI New URI for the game
-    function updateGameURI(uint256 tokenId, string memory newURI) external;
+    /// @param deadline Signature expiration timestamp
+    /// @param signature EIP-712 signature from the token owner
+    function updateGameURI(
+        uint256 tokenId,
+        string memory newURI,
+        uint256 deadline,
+        bytes memory signature
+    ) external;
 
-    /// @notice Update the URI for an existing game by UUID
-    /// @dev Only callable by owner or operator (not token holder)
+    /// @notice Update the URI for an existing game by UUID with EIP-712 signature verification
+    /// @dev Requires token owner signature to prove consent. Operator submits the transaction.
     /// @param uuid The game UUID
     /// @param newURI New URI for the game
-    function updateGameURIByUUID(string memory uuid, string memory newURI) external;
+    /// @param deadline Signature expiration timestamp
+    /// @param signature EIP-712 signature from the token owner
+    function updateGameURIByUUID(
+        string memory uuid,
+        string memory newURI,
+        uint256 deadline,
+        bytes memory signature
+    ) external;
 
     /// @notice Get token ID by UUID
     /// @param uuid The game UUID

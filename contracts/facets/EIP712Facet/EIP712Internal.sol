@@ -35,17 +35,44 @@ abstract contract EIP712Internal {
         return "1";
     }
 
-    /// @notice Calculate the EIP-712 domain separator
-    /// @dev Uses name, version, chainId, and verifyingContract
+    /// @notice Get the cached domain separator, or build and cache it
+    /// @dev Handles chain forks by checking block.chainid
     /// @return The domain separator
     function _domainSeparator() internal view returns (bytes32) {
+        EIP712Storage.Layout storage ds = EIP712Storage.layout();
+        
+        // If chain ID matches and we have a cached separator, return it
+        if (block.chainid == ds.cachedChainId && ds.cachedDomainSeparator != bytes32(0)) {
+            return ds.cachedDomainSeparator;
+        }
+        
+        // Otherwise, build it (will be cached on first write operation)
+        return _buildDomainSeparator();
+    }
+
+    /// @notice Build the domain separator from scratch
+    /// @dev This is called when cache is invalid or empty
+    /// @return separator The computed domain separator
+    function _buildDomainSeparator() internal view returns (bytes32 separator) {
         bytes32 nameHash = keccak256(bytes(_domainName()));
         bytes32 versionHash = keccak256(bytes(_domainVersion()));
         
-        return EIP712.calculateDomainSeparator_01111(
+        separator = EIP712.calculateDomainSeparator_01111(
             nameHash,
             versionHash
         );
+    }
+
+    /// @notice Cache the domain separator (called during state-changing operations)
+    /// @dev This should be called in _verifySignatureAndRecover or initialization
+    function _cacheDomainSeparator() internal {
+        EIP712Storage.Layout storage ds = EIP712Storage.layout();
+        
+        // Only update cache if chain ID changed or cache is empty
+        if (block.chainid != ds.cachedChainId || ds.cachedDomainSeparator == bytes32(0)) {
+            ds.cachedDomainSeparator = _buildDomainSeparator();
+            ds.cachedChainId = block.chainid;
+        }
     }
 
     /// @notice Hash typed data according to EIP-712
@@ -68,6 +95,9 @@ abstract contract EIP712Internal {
         bytes memory signature
     ) internal returns (address signer) {
         EIP712Storage.Layout storage ds = EIP712Storage.layout();
+        
+        // Cache domain separator on first use (gas optimization)
+        _cacheDomainSeparator();
         
         // Check deadline
         if (block.timestamp > deadline) {
