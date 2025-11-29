@@ -98,17 +98,6 @@ contract GameRegistryFacet is GameRegistryInternal, OperableInternal, _Ownable, 
     }
 
     // ============ ERC721 Standard Functions ============
-    // These are inherited from SolidstateNonFungibleToken and automatically
-    // exposed as external functions. Your deployment script will register them.
-
-    // The following functions are available because GameRegistryInternal 
-    // inherits from _SolidstateNonFungibleToken which inherits from:
-    // - _NonFungibleToken (core ERC721)
-    // - _NonFungibleTokenEnumerable (enumerable extension)  
-    // - _NonFungibleTokenMetadata (metadata extension)
-    
-    // However, since we're inheriting the INTERNAL version (_SolidstateNonFungibleToken),
-    // we need to manually expose the external functions we want:
 
     // ERC721 Core Functions
     function balanceOf(address account) external view returns (uint256) {

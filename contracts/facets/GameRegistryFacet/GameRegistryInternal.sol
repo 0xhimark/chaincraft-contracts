@@ -17,7 +17,8 @@ abstract contract GameRegistryInternal is
     
     // ============ Constants ============
     
-    /// @dev Exact length for UUID v4 format (RFC 4122): xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+    /// @dev Expected UUID length (36 characters including hyphens)
+    /// @dev Format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
     uint256 private constant UUID_LENGTH = 36;
     
     /// @dev Maximum URI length (sufficient for IPFS, HTTPS, and Arweave URIs with buffer)

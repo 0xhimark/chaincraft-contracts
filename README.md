@@ -1,260 +1,99 @@
 # ChainCraft Contracts
 
-**EIP-2535 Diamond Proxy implementation for ChainCraft game registry NFTs**
+> EIP-2535 Diamond Proxy implementation for on-chain game registry NFTs
 
 ## Overview
 
-Diamond proxy-based smart contract system for managing game NFTs. Games are published as ERC721 tokens with unique UUIDs, allowing the game builder to mint and manage game metadata on-chain.
+Diamond proxy-based smart contract system for managing game NFTs. Each game is published as an ERC721 token with a unique UUID, enabling on-chain game metadata management with user consent via EIP-712 signatures.
 
 ### Key Features
 
-- ✅ **EIP-2535 Diamond Pattern** - Upgradeable and modular
-- ✅ **ERC721 Game NFTs** - Each game is a unique NFT
-- ✅ **UUID-Based Registry** - Link off-chain game IDs to on-chain tokens
+- ✅ **EIP-2535 Diamond Pattern** - Upgradeable and modular architecture
+- ✅ **ERC721 Game NFTs** - Each game is a unique, transferable NFT
+- ✅ **UUID Registry** - Link off-chain game IDs to on-chain tokens
 - ✅ **EIP-712 Signatures** - User consent required for game publishing
-- ✅ **Operator System** - Delegate game publishing to trusted addresses
-- ✅ **Secure Access Control** - Diamond admin + Owner + Operators
-- ✅ **EIP-7201 Storage** - No collision risk
-
-## Architecture
-
-```
-ChainCraftDiamond (Proxy)
-├── ProxyAdminFacet      - Transfer diamond admin rights
-├── OperableFacet        - Manage operators
-├── EIP712Facet          - EIP-712 signature verification
-└── GameRegistryFacet    - Publish & manage game NFTs
-    ├── ERC721 Standard  - Transfer, approve, etc.
-    ├── UUID Registry    - Map game IDs to tokens
-    └── EIP-712 Auth     - User signature verification
-```
-
-### Access Control
-
-| Role              | Can Do                                |
-| ----------------- | ------------------------------------- |
-| **Proxy Admin**   | diamondCut(), setFallbackAddress()    |
-| **Owner**         | Initialize, add/remove operators      |
-| **Operators**     | Publish games, update game URIs       |
-| **Token Holders** | Transfer NFTs, approve, view metadata |
+- ✅ **Operator System** - Delegate publishing rights to trusted addresses
+- ✅ **EIP-7201 Storage** - Namespaced storage prevents collisions
 
 ## Installation
 
 ```bash
-# Install dependencies
 pnpm install
-
-# Compile contracts
-pnpm hardhat compile
-
-# Run tests
-pnpm test
 ```
 
 ## Quick Start
 
-### Deploy Diamond
+```bash
+# Compile contracts
+pnpm hardhat compile
 
-```typescript
-import { viem } from "hardhat";
+# Run tests
+pnpm hardhat test
 
-// Deploy diamond (deployer becomes proxy admin + owner)
-const diamond = await viem.deployContract("ChainCraftDiamond");
-
-// Deploy facets
-const proxyAdminFacet = await viem.deployContract("ProxyAdminFacet");
-const operableFacet = await viem.deployContract("OperableFacet");
-const gameRegistryFacet = await viem.deployContract("GameRegistryFacet");
-
-// Add facets via diamondCut
-await diamond.write.diamondCut([
-  [
-    { target: proxyAdminFacet.address, action: 0, selectors: [...] },
-    { target: operableFacet.address, action: 0, selectors: [...] },
-    { target: gameRegistryFacet.address, action: 0, selectors: [...] }
-  ],
-  "0x0000000000000000000000000000000000000000",
-  "0x"
-]);
-
-// Initialize game registry
-await diamond.write.initialize(["ChainCraft Games", "CCG"]);
+# Deploy
+pnpm hardhat ignition deploy ignition/modules/ChainCraft.ts --network <your-network>
 ```
 
-### Publish a Game
+## Architecture
 
-```typescript
-// Add operator (your backend wallet)
-await diamond.write.addOperator([operatorAddress]);
-
-// User signs EIP-712 message to consent to game publishing
-// Using viem wallet client (or ethers.js, web3.js, etc.)
-const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600); // 1 hour
-const signature = await walletClient.signTypedData({
-  domain: {
-    name: "ChainCraft",
-    version: "1",
-    chainId: 1992, // Your chain ID
-    verifyingContract: diamondAddress,
-  },
-  types: {
-    PublishGame: [
-      { name: "uuid", type: "string" },
-      { name: "to", type: "address" },
-      { name: "gameURI", type: "string" },
-      { name: "deadline", type: "uint256" },
-    ],
-  },
-  primaryType: "PublishGame",
-  message: {
-    uuid: "game-uuid-123",
-    to: playerAddress,
-    gameURI:
-      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-    deadline,
-  },
-});
-
-// Operator publishes game with user's signature
-await diamond.write.publishGame(
-  [
-    "game-uuid-123", // UUID from your game builder
-    playerAddress, // Who receives the NFT (must match signer)
-    "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", // Game metadata URI
-    deadline, // Signature expiration
-    signature, // User's EIP-712 signature
-  ],
-  {
-    account: operatorAccount, // Operator submits the transaction
-  }
-);
-
-// Update game metadata (operator only, no signature needed)
-await diamond.write.updateGameURIByUUID([
-  "game-uuid-123",
-  "ipfs://bafybeihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku",
-]);
 ```
+ChainCraftDiamond (EIP-2535 Proxy)
+├── OperableFacet        - Manage operators
+├── EIP712Facet          - EIP-712 signature verification
+└── GameRegistryFacet    - Publish & manage game NFTs
+    ├── ERC721 Standard
+    ├── UUID Registry
+    └── EIP-712 Auth
+```
+
+### Access Control
+
+| Role              | Capabilities                                                                 |
+| ----------------- | ---------------------------------------------------------------------------- |
+| **Proxy Admin**   | `diamondCut()`, `setFallbackAddress()` - Controls diamond structure          |
+| **Owner**         | Initialize facets, add/remove operators                                      |
+| **Operators**     | Publish games (with user signature), update URIs (with or without signature) |
+| **Token Holders** | Transfer NFTs, approve, view metadata                                        |
 
 ## Core Concepts
 
 ### Diamond Proxy Pattern
 
-The diamond uses [EIP-2535](https://eips.ethereum.org/EIPS/eip-2535) for upgradeability:
+Uses [EIP-2535](https://eips.ethereum.org/EIPS/eip-2535) for upgradeability:
 
-- **Facets** - Modular functionality (like plugins)
+- **Facets** - Modular functionality
 - **Diamond Cut** - Add/replace/remove facets
-- **Storage Isolation** - Each facet has namespaced storage (EIP-7201)
+- **Storage Isolation** - EIP-7201 namespaced storage
 
 ### Proxy Admin vs Owner
 
-**Two separate roles:**
+Two separate roles:
 
 ```
 Proxy Admin (ERC-1967)
   └─ Controls diamond structure (diamondCut)
   └─ Initially: deployer
-  └─ Transfer: via ProxyAdminFacet
+  └─ Transfer: via ProxyAdminFacet (optional)
 
 Owner (ERC-173)
-  └─ Controls business logic (operators, etc.)
+  └─ Controls business logic (operators, initialization)
   └─ Initially: deployer
   └─ Transfer: via transferOwnership/acceptOwnership
 ```
 
-**Key:** Transferring owner does NOT transfer proxy admin!
+**Important:** Transferring owner does NOT transfer proxy admin!
 
 ### UUID Registry
 
-Games are identified by UUIDs from your game builder:
-
-```typescript
-// Your DB
-gameId: "abc-123"
-
-// On-chain
-uuid: "abc-123" → tokenId: 1
-tokenId: 1 → uuid: "abc-123"
-
-// Lookup by UUID
-const tokenId = await diamond.read.getTokenIdByUUID(["abc-123"]);
-
-// Lookup by Token ID
-const uuid = await diamond.read.getUUIDByTokenId([tokenId]);
-```
-
-## Deployment
-
-### Testnet
-
-```bash
-# Set private key
-export PRIVATE_KEY="your-private-key"
-
-# Deploy to Sanko testnet
-pnpm hardhat ignition deploy ignition/modules/ChainCraft.ts --network sankoTestnet
-```
-
-### Mainnet
-
-Deploy from a multi-sig wallet (Gnosis Safe) for security. Both proxy admin and owner should be the multi-sig.
-
-## Admin Transfer
-
-If you need to transfer diamond admin rights:
-
-```typescript
-// Transfer proxy admin
-await proxyAdminFacet.write.transferProxyAdmin([newAdminAddress], {
-  account: currentAdminAccount,
-});
-
-// Transfer owner (separate)
-await diamond.write.transferOwnership([newOwnerAddress]);
-await diamond.write.acceptOwnership({ account: newOwner });
-```
+Games are identified by UUIDs linking off-chain game IDs to on-chain token IDs.
 
 ## Testing
 
 ```bash
-# Run all tests (62 tests)
-pnpm test
-
-# Test breakdown:
-# - Diamond Access Control: 14 tests
-# - EIP712 Facet: 5 tests
-# - GameRegistry Facet: 33 tests
-# - ProxyAdmin Facet: 10 tests
+pnpm hardhat test
 ```
 
 All tests passing: **62/62** ✅
-
-See [SECURITY_NOTES.md](./SECURITY_NOTES.md) for detailed security analysis.
-
-## Scripts
-
-### Operator Management
-
-```bash
-# List all operators
-pnpm hardhat run scripts/list-operators.ts --network sankoTestnet
-
-# Add an operator
-pnpm hardhat run scripts/add-operator.ts --network sankoTestnet
-
-# Remove an operator
-pnpm hardhat run scripts/remove-operator.ts --network sankoTestnet
-```
-
-### ProxyAdminFacet Management
-
-```bash
-# Add ProxyAdminFacet (if you need to transfer admin later)
-DIAMOND_ADDRESS=0x... pnpm hardhat run scripts/add-proxy-admin-facet.ts --network sankoTestnet
-
-# Remove ProxyAdminFacet (makes diamond structure immutable)
-DIAMOND_ADDRESS=0x... pnpm hardhat run scripts/remove-proxy-admin-facet.ts --network sankoTestnet
-```
 
 ## Project Structure
 
@@ -262,7 +101,7 @@ DIAMOND_ADDRESS=0x... pnpm hardhat run scripts/remove-proxy-admin-facet.ts --net
 contracts/
 ├── ChainCraftDiamond.sol           # Main diamond proxy
 └── facets/
-    ├── ProxyAdminFacet/            # Admin transfer
+    ├── ProxyAdminFacet/            # Admin transfer (optional)
     ├── OperableFacet/              # Operator management
     ├── EIP712Facet/                # EIP-712 signature verification
     └── GameRegistryFacet/          # Game NFT registry
@@ -272,16 +111,11 @@ test/
 ├── EIP712Facet.test.ts             # EIP-712 signature tests
 ├── GameRegistryFacet.test.ts       # Game registry tests
 └── ProxyAdminFacet.test.ts         # Admin transfer tests
+
+scripts/
+├── add-operator.ts                 # Add operator
+├── remove-operator.ts              # Remove operator
+├── list-operators.ts               # List all operators
+├── add-proxy-admin-facet.ts        # Add ProxyAdminFacet
+└── remove-proxy-admin-facet.ts     # Remove ProxyAdminFacet
 ```
-
-## Resources
-
-- **EIP-2535 Diamond Standard**: https://eips.ethereum.org/EIPS/eip-2535
-- **EIP-712 Typed Data Signing**: https://eips.ethereum.org/EIPS/eip-712
-- **EIP-7201 Storage Namespacing**: https://eips.ethereum.org/EIPS/eip-7201
-- **SolidState Contracts**: https://github.com/solidstate-network/solidstate-solidity
-- **Hardhat Documentation**: https://hardhat.org/docs
-
-## License
-
-MIT License - see LICENSE file for details

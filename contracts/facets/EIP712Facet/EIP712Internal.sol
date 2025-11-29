@@ -63,8 +63,8 @@ abstract contract EIP712Internal {
         );
     }
 
-    /// @notice Cache the domain separator (called during state-changing operations)
-    /// @dev This should be called in _verifySignatureAndRecover or initialization
+    /// @notice Cache the domain separator for gas efficiency
+    /// @dev Initializes cache on first call, reuses cached value on subsequent calls
     function _cacheDomainSeparator() internal {
         EIP712Storage.Layout storage ds = EIP712Storage.layout();
         
