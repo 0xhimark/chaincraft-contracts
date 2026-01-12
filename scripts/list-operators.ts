@@ -1,6 +1,7 @@
 import { createRequire } from "module";
 import { createPublicClient, http, getContract } from "viem";
-import { sankoTestnet } from "../utils/chains.js";
+import { sankoTestnet, arbitrumSepolia, getNetworkConfig } from "../utils/chains.js";
+import hre from "hardhat";
 import fs from "fs";
 import path from "path";
 
@@ -83,16 +84,19 @@ function getDeployedAddress(chainId: number): string {
 async function main() {
   console.log("📋 Listing operators for ChainCraftDiamond contract...");
 
+  // Get network configuration
+  const { chain, chainId, rpcUrl } = getNetworkConfig(hre);
+
   try {
     // Get deployed contract address for the chain
-    const contractAddress = getDeployedAddress(sankoTestnet.id);
+    const contractAddress = getDeployedAddress(chainId);
     console.log(`📋 Contract Address: ${contractAddress}`);
-    console.log(`🔗 Chain: ${sankoTestnet.name} (${sankoTestnet.id})`);
+    console.log(`🔗 Chain: ${chain.name} (${chain.id})`);
 
     // Create public client
     const publicClient = createPublicClient({
-      chain: sankoTestnet,
-      transport: http(),
+      chain: chain,
+      transport: http(rpcUrl),
     });
 
     // Get contract instance

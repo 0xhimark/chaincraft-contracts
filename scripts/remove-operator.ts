@@ -6,7 +6,12 @@ import {
   getContract,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { sankoTestnet } from "../utils/chains.js";
+import {
+  sankoTestnet,
+  arbitrumSepolia,
+  getNetworkConfig,
+} from "../utils/chains.js";
+import hre from "hardhat";
 import fs from "fs";
 import path from "path";
 
@@ -81,7 +86,7 @@ async function main() {
   if (!operatorAddress) {
     console.error("❌ Error: Operator address is required");
     console.log(
-      "Usage: export OPERATOR_ADDR=0x... && pnpm hardhat run scripts/remove-operator.ts --network sankoTestnet"
+      "Usage: export OPERATOR_ADDR=0x... && pnpm hardhat run scripts/remove-operator.ts --network <network>"
     );
     process.exit(1);
   }
@@ -91,11 +96,14 @@ async function main() {
     process.exit(1);
   }
 
+  // Get network configuration
+  const { chain, chainId, rpcUrl } = getNetworkConfig(hre);
+
   try {
     // Get deployed contract address for the chain
-    const contractAddress = getDeployedAddress(sankoTestnet.id);
+    const contractAddress = getDeployedAddress(chainId);
     console.log(`📋 Contract Address: ${contractAddress}`);
-    console.log(`🔗 Chain: ${sankoTestnet.name} (${sankoTestnet.id})`);
+    console.log(`🔗 Chain: ${chain.name} (${chain.id})`);
     console.log(`➖ Removing Operator: ${operatorAddress}`);
 
     // Create account from private key
@@ -106,14 +114,14 @@ async function main() {
 
     // Create clients
     const publicClient = createPublicClient({
-      chain: sankoTestnet,
-      transport: http(),
+      chain: chain,
+      transport: http(rpcUrl),
     });
 
     const walletClient = createWalletClient({
       account,
-      chain: sankoTestnet,
-      transport: http(),
+      chain: chain,
+      transport: http(rpcUrl),
     });
 
     // Get contract instance
@@ -149,9 +157,15 @@ async function main() {
     if (receipt.status === "success") {
       console.log("✅ Operator removed successfully!");
       console.log(`📄 Transaction hash: ${tx}`);
-      console.log(
-        `🔗 Explorer: https://sanko-arb-sepolia.calderaexplorer.xyz/tx/${tx}`
-      );
+
+      // Show explorer link based on chain
+      if (chainId === arbitrumSepolia.id) {
+        console.log(`🔗 Explorer: https://sepolia.arbiscan.io/tx/${tx}`);
+      } else if (chainId === sankoTestnet.id) {
+        console.log(
+          `🔗 Explorer: https://sanko-arb-sepolia.calderaexplorer.xyz/tx/${tx}`
+        );
+      }
 
       // Verify the operator was removed
       const isStillOperator = await contract.read.isOperator([

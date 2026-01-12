@@ -33,6 +33,12 @@ const config: HardhatUserConfig = {
       chainId: 1992,
       accounts: [process.env.PRIVATE_KEY!],
     },
+    arbitrumSepolia: {
+      type: "http",
+      url: "https://arbitrum-sepolia-rpc.publicnode.com",
+      chainId: 421614,
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+    },
   },
 };
 

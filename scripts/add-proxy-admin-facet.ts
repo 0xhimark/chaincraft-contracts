@@ -7,7 +7,8 @@ import {
   toFunctionSelector,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { sankoTestnet } from "../utils/chains.js";
+import { sankoTestnet, arbitrumSepolia, getNetworkConfig } from "../utils/chains.js";
+import hre from "hardhat";
 
 const require = createRequire(import.meta.url);
 
@@ -61,7 +62,7 @@ async function main() {
   if (!diamondAddress) {
     console.error("❌ Error: Diamond address is required");
     console.log(
-      "Usage: DIAMOND_ADDRESS=0x... pnpm hardhat run scripts/add-proxy-admin-facet.ts --network sankoTestnet"
+      "Usage: DIAMOND_ADDRESS=0x... pnpm hardhat run scripts/add-proxy-admin-facet.ts --network <network>"
     );
     process.exit(1);
   }
@@ -71,9 +72,12 @@ async function main() {
     process.exit(1);
   }
 
+  // Get network configuration
+  const { chain, chainId, rpcUrl } = getNetworkConfig(hre);
+
   try {
     console.log(`📋 Diamond Address: ${diamondAddress}`);
-    console.log(`🔗 Chain: ${sankoTestnet.name} (${sankoTestnet.id})`);
+    console.log(`🔗 Chain: ${chain.name} (${chain.id})`);
 
     // Create account from private key
     const account = privateKeyToAccount(
@@ -83,14 +87,14 @@ async function main() {
 
     // Create clients
     const publicClient = createPublicClient({
-      chain: sankoTestnet,
-      transport: http(),
+      chain: chain,
+      transport: http(rpcUrl),
     });
 
     const walletClient = createWalletClient({
       account,
-      chain: sankoTestnet,
-      transport: http(),
+      chain: chain,
+      transport: http(rpcUrl),
     });
 
     // Load ProxyAdminFacet ABI and bytecode
@@ -161,9 +165,17 @@ async function main() {
     if (receipt.status === "success") {
       console.log("\n✅ ProxyAdminFacet successfully added to diamond!");
       console.log(`📄 Transaction hash: ${tx}`);
-      console.log(
-        `🔗 Explorer: https://sanko-arb-sepolia.calderaexplorer.xyz/tx/${tx}`
-      );
+      
+      // Show explorer link based on chain
+      if (chainId === arbitrumSepolia.id) {
+        console.log(
+          `🔗 Explorer: https://sepolia.arbiscan.io/tx/${tx}`
+        );
+      } else if (chainId === sankoTestnet.id) {
+        console.log(
+          `🔗 Explorer: https://sanko-arb-sepolia.calderaexplorer.xyz/tx/${tx}`
+        );
+      }
       console.log("\nYou can now use:");
       console.log(`  - transferProxyAdmin(address newAdmin)`);
       console.log(`  - getProxyAdmin()`);

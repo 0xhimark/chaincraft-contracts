@@ -1,0 +1,12 @@
+{
+  "ChainCraft#ChainCraftDiamond": "0x1B58c30316578e76604C4aF39748a223e149DED8",
+  "ChainCraft#EIP712Facet": "0x5B6d65c9648d5166B0a49df23b3d807c8dA3292E",
+  "ChainCraft#GameRegistryFacet": "0xAF925A4f76f617900A5C873c5575830a5EC3169d",
+  "ChainCraft#OperableFacet": "0x68f8dad7EaffE4A939BF3BF26E6a3483Ef77c280",
+  "ChainCraft#DiamondAsGameRegistry": "0x1B58c30316578e76604C4aF39748a223e149DED8",
+  "ChainCraftDev#ChainCraftDiamond": "0x9B6A4a0B1C01e87Ab23C6312ae1119734d1C371E",
+  "ChainCraftDev#GameRegistryFacet": "0xc9fCaFC13A6208633E8CDFfed6106C846783F946",
+  "ChainCraftDev#EIP712Facet": "0x950c9F23CB76277569973ae97ee692E963f9d2Bf",
+  "ChainCraftDev#OperableFacet": "0x1fA011f74C608Af117b69f932F97320c78E12D06",
+  "ChainCraftDev#DiamondAsGameRegistry": "0x9B6A4a0B1C01e87Ab23C6312ae1119734d1C371E"
+}
