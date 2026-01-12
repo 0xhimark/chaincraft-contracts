@@ -42,7 +42,10 @@ const OPERABLE_FACET_ABI = [
   },
 ] as const;
 
-function getDeployedAddress(chainId: number): string {
+function getDeployedAddress(
+  chainId: number,
+  moduleName: string = "ChainCraft"
+): string {
   try {
     const deploymentPath = path.join(
       process.cwd(),
@@ -62,11 +65,20 @@ function getDeployedAddress(chainId: number): string {
       fs.readFileSync(deploymentPath, "utf-8")
     );
 
-    const diamondAddress = deployedAddresses["ChainCraft#ChainCraftDiamond"];
+    const contractKey = `${moduleName}#ChainCraftDiamond`;
+    const diamondAddress = deployedAddresses[contractKey];
 
     if (!diamondAddress) {
+      // List available contracts to help the user
+      const availableContracts = Object.keys(deployedAddresses)
+        .filter((key) => key.includes("ChainCraftDiamond"))
+        .map((key) => `  - ${key}`)
+        .join("\n");
+
       throw new Error(
-        `ChainCraftDiamond address not found in deployment file for chain ${chainId}`
+        `Contract "${contractKey}" not found in deployment file for chain ${chainId}.\n` +
+          `Available contracts:\n${availableContracts || "  (none found)"}\n` +
+          `Use CONTRACT_MODULE environment variable to specify the module name (e.g., "ChainCraft" or "ChainCraftDev")`
       );
     }
 
@@ -88,6 +100,9 @@ async function main() {
     console.log(
       "Usage: export OPERATOR_ADDR=0x... && pnpm hardhat run scripts/add-operator.ts --network <network>"
     );
+    console.log(
+      "Optional: export CONTRACT_MODULE=ChainCraftDev to use a different contract module"
+    );
     process.exit(1);
   }
 
@@ -96,12 +111,16 @@ async function main() {
     process.exit(1);
   }
 
+  // Get contract module name (defaults to "ChainCraft" for backward compatibility)
+  const contractModule = process.env.CONTRACT_MODULE || "ChainCraft";
+  console.log(`📦 Using contract module: ${contractModule}`);
+
   // Get network configuration
   const { chain, chainId, rpcUrl } = getNetworkConfig(hre);
 
   try {
     // Get deployed contract address for the chain
-    const contractAddress = getDeployedAddress(chainId);
+    const contractAddress = getDeployedAddress(chainId, contractModule);
     console.log(`📋 Contract Address: ${contractAddress}`);
     console.log(`🔗 Chain: ${chain.name} (${chain.id})`);
     console.log(`➕ Adding Operator: ${operatorAddress}`);
